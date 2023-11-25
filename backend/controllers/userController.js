@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/createToken.js";
 import User from "../models/userModel.js";
+
 // @desc    Register a new user
 // @route   POST /api/users
 // @access  Public
@@ -46,7 +47,25 @@ const registerUser = asyncHandler(async (req, res) => {
 // @route   POST /api/users/auth
 // @access  Public
 const authUser = asyncHandler(async (req, res) => {
-  res.status(200).send("Auth user");
+  const { email, password } = req.body;
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    const validPassword = await bcrypt.compare(password, userExists.password);
+
+    if (validPassword) {
+      generateToken(res, userExists._id);
+      res.status(200).json({
+        _id: userExists._id,
+        email: userExists.email,
+      });
+    } else {
+      res.status(401);
+      throw new Error("Invalid email or password");
+    }
+  } else {
+    res.status(404);
+    throw new Error("user not found");
+  }
 });
 
 // @desc    Logout user / clear cookie
